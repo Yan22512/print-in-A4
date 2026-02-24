@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>相片極限排版 Pro</title>
+    <title>相片極限排版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-100 min-h-screen flex flex-col items-center p-4">
 
     <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md">
-        <h1 class="text-2xl font-bold mb-1 text-center text-indigo-700">📸 相片極限排版 Pro</h1>
+        <h1 class="text-2xl font-bold mb-1 text-center text-indigo-700">📸 相片極限排版</h1>
         <p class="text-[10px] text-center text-slate-400 mb-6">將多個檔案合併在A4尺寸</p>
         
         <div class="space-y-4">
@@ -35,26 +35,31 @@
 
             <div class="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center">
                 <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
-                <label for="fileInput" class="cursor-pointer text-sm text-indigo-600 font-medium block w-full">
-                    點擊上傳相片 (支援 HEIC/大圖)
-                </label>
-                <p id="fileCount" class="text-[10px] text-slate-400 mt-1">尚未選擇檔案</p>
+                <button onclick="document.getElementById('fileInput').click()" class="text-sm text-indigo-600 font-bold w-full py-2">
+                    [ 點擊選取相片 ]
+                </button>
+                <p id="fileCount" class="text-[11px] text-slate-500 mt-2 font-medium">尚未選取任何檔案</p>
             </div>
 
-            <button id="generateBtn" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-indigo-700 active:scale-[0.98] transition-all disabled:bg-slate-300 shadow-lg">
-                產出 PDF 並下載
-            </button>
+            <div class="flex gap-2">
+                <button id="generateBtn" class="flex-1 bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-indigo-700 active:scale-[0.98] transition-all disabled:bg-slate-300">
+                    產出 PDF
+                </button>
+                <button onclick="location.reload()" class="bg-slate-200 text-slate-600 px-4 rounded-xl hover:bg-slate-300">
+                    重設
+                </button>
+            </div>
         </div>
 
-        <div id="status" class="mt-6 hidden">
-            <div class="flex justify-between mb-1">
-                <span id="progressText" class="text-xs font-bold text-indigo-700">正在處理中...</span>
-                <span id="progressPercent" class="text-xs font-bold text-indigo-700">0%</span>
+        <div id="statusArea" class="mt-6 hidden">
+            <div class="flex justify-between mb-1 text-indigo-700 font-bold text-xs">
+                <span id="progressText">處理中...</span>
+                <span id="progressPercent">0%</span>
             </div>
             <div class="w-full bg-slate-100 rounded-full h-2">
                 <div id="progressBar" class="bg-indigo-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
             </div>
-            <p id="errorLog" class="text-[9px] text-red-500 mt-2 text-center"></p>
+            <div id="errorLog" class="text-[10px] text-red-500 mt-2 whitespace-pre-wrap"></div>
         </div>
     </div>
 
@@ -62,93 +67,105 @@
         const { jsPDF } = window.jspdf;
 
         const LAYOUT_CONFIGS = {
-            'reading_card': [
-                { x: 0, y: 0, w: 105, h: 75 }, { x: 105, y: 0, w: 105, h: 75 },
-                { x: 0, y: 77, w: 105, h: 75 }, { x: 105, y: 77, w: 105, h: 75 },
-                { x: 0, y: 154, w: 105, h: 75 }, { x: 105, y: 154, w: 105, h: 75 }
-            ],
-            '3x5': [
-                { x: 0, y: 0, w: 127, h: 76.2 }, { x: 0, y: 78.2, w: 127, h: 76.2 }, { x: 0, y: 156.4, w: 127, h: 76.2 },
-                { x: 129, y: 0, w: 76.2, h: 127 }, { x: 129, y: 129, w: 76.2, h: 127 }
-            ],
-            '4x6': [
-                { x: 2, y: 2, w: 101.6, h: 152.4 }, { x: 105.6, y: 2, w: 101.6, h: 152.4 },
-                { x: 2, y: 156.4, w: 152.4, h: 101.6 }
-            ],
-            'A6': [
-                { x: 0, y: 0, w: 105, h: 148 }, { x: 105, y: 0, w: 105, h: 148 },
-                { x: 0, y: 149, w: 105, h: 148 }, { x: 105, y: 149, w: 105, h: 148 }
-            ],
-            'A5': [
-                { x: 31, y: 0, w: 148, h: 210 }, { x: 31, y: 212, w: 148, h: 210 }
-            ]
+            'reading_card': [{x:0,y:0,w:105,h:75},{x:105,y:0,w:105,h:75},{x:0,y:77,w:105,h:75},{x:105,y:77,w:105,h:75},{x:0,y:154,w:105,h:75},{x:105,y:154,w:105,h:75}],
+            '3x5': [{x:0,y:0,w:127,h:76.2},{x:0,y:78.2,w:127,h:76.2},{x:0,y:156.4,w:127,h:76.2},{x:129,y:0,w:76.2,h:127},{x:129,y:129,w:76.2,h:127}],
+            '4x6': [{x:2,y:2,w:101.6,h:152.4},{x:105.6,y:2,w:101.6,h:152.4},{x:2,y:156.4,w:152.4,h:101.6}],
+            'A6': [{x:0,y:0,w:105,h:148},{x:105,y:0,w:105,h:148},{x:0,y:149,w:105,h:148},{x:105,y:149,w:105,h:148}],
+            'A5': [{x:31,y:0,w:148,h:210},{x:31,y:212,w:148,h:210}]
         };
 
         const fileInput = document.getElementById('fileInput');
+        const fileCountDisplay = document.getElementById('fileCount');
         const generateBtn = document.getElementById('generateBtn');
 
+        // 選取檔案後的立即回饋
         fileInput.addEventListener('change', () => {
-            document.getElementById('fileCount').innerText = `已選擇 ${fileInput.files.length} 張照片`;
+            if (fileInput.files.length > 0) {
+                fileCountDisplay.innerText = `✅ 已成功選取 ${fileInput.files.length} 張相片`;
+                fileCountDisplay.classList.add('text-green-600');
+            } else {
+                fileCountDisplay.innerText = "尚未選取任何檔案";
+                fileCountDisplay.classList.remove('text-green-600');
+            }
         });
 
-        function getFormattedTimestamp() {
+        function getTimestamp() {
             const d = new Date();
-            const pad = (n) => n.toString().padStart(2, '0');
-            return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}`;
+            const f = (v) => v.toString().padStart(2, '0');
+            return `${d.getFullYear()}${f(d.getMonth()+1)}${f(d.getDate())}${f(d.getHours())}${f(d.getMinutes())}`;
         }
 
-        function drawLMarks(doc, x, y, w, h) {
-            const l = 3; doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.1);
-            doc.line(x, y, x + l, y); doc.line(x, y, x, y + l);
-            doc.line(x + w, y, x + w - l, y); doc.line(x + w, y, x + w, y + l);
-            doc.line(x, y + h, x + l, y + h); doc.line(x, y + h, x, y + h - l);
-            doc.line(x + w, y + h, x + w - l, y + h); doc.line(x + w, y + h, x + w, y + h - l);
+        function drawL(doc, x, y, w, h) {
+            const s = 3; doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.1);
+            doc.line(x,y,x+s,y); doc.line(x,y,x,y+s);
+            doc.line(x+w,y,x+w-s,y); doc.line(x+w,y,x+w,y+s);
+            doc.line(x,y+h,x+s,y+h); doc.line(x,y+h,x,y+h-s);
+            doc.line(x+w,y+h,x+w-s,y+h); doc.line(x+w,y+h,x+w,y+h-s);
         }
 
-        // --- 核心優化：使用 Canvas 預處理圖片，解決空白與壓縮問題 ---
-        function processImage(file) {
+        // 優化後的影像處理：使用 URL.createObjectURL 減少記憶體消耗
+        async function smartProcess(file) {
             return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-
-                        // 智慧縮放：如果邊長超過 3500px 則等比例縮小，防止記憶體崩潰
-                        const maxSide = 3500;
-                        if (width > maxSide || height > maxSide) {
-                            if (width > height) {
-                                height = (maxSide / width) * height;
-                                width = maxSide;
-                            } else {
-                                width = (maxSide / height) * width;
-                                height = maxSide;
-                            }
-                        }
-
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-
-                        // 統一轉為 JPEG 格式，品質設為 0.92 (高畫質)
-                        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-                        resolve({ src: dataUrl, width, height });
-                    };
-                    img.onerror = () => reject("圖片解析失敗");
-                    img.src = e.target.result;
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width, h = img.height;
+                    const max = 3000; // 降低至 3000px 確保極限穩定性
+                    if (w > max || h > max) {
+                        const ratio = Math.min(max / w, max / h);
+                        w *= ratio; h *= ratio;
+                    }
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    const data = canvas.toDataURL('image/jpeg', 0.9);
+                    URL.revokeObjectURL(url); // 釋放記憶體
+                    resolve({ src: data, w, h });
                 };
-                reader.onerror = () => reject("檔案讀取失敗");
-                reader.readAsDataURL(file);
+                img.onerror = () => reject("格式不支援或檔案損壞");
+                img.src = url;
             });
         }
 
         generateBtn.addEventListener('click', async () => {
             const files = fileInput.files;
-            if (files.length === 0) return alert('請先上傳照片！');
+            if (files.length === 0) return alert('請先選取相片！');
 
-            const sizeKey = document.getElementById('sizeSelect').value;
-            const config = LAYOUT_CONFIGS[sizeKey];
-            const
+            const config = LAYOUT_CONFIGS[document.getElementById('sizeSelect').value];
+            const hasL = document.getElementById('lineToggle').checked;
+            
+            generateBtn.disabled = true;
+            document.getElementById('statusArea').classList.remove('hidden');
+            document.getElementById('errorLog').innerText = "";
+
+            const doc = new jsPDF('p', 'mm', 'a4');
+
+            for (let i = 0; i < files.length; i++) {
+                try {
+                    const p = Math.round(((i + 1) / files.length) * 100);
+                    document.getElementById('progressBar').style.width = p + '%';
+                    document.getElementById('progressPercent').innerText = p + '%';
+                    document.getElementById('progressText').innerText = `處理中 (${i+1}/${files.length})`;
+
+                    const img = await smartProcess(files[i]);
+                    const idx = i % config.length;
+                    if (i > 0 && idx === 0) doc.addPage();
+
+                    const pos = config[idx];
+                    const rot = (img.h > img.w) !== (pos.h > pos.w) ? 90 : 0;
+
+                    doc.addImage(img.src, 'JPEG', pos.x, pos.y, pos.w, pos.h, undefined, 'FAST', rot);
+                    if (hasL) drawL(doc, pos.x, pos.y, pos.w, pos.h);
+                } catch (e) {
+                    document.getElementById('errorLog').innerText += `第 ${i+1} 張失敗: ${e}\n`;
+                }
+            }
+
+            doc.save(`排版_${getTimestamp()}.pdf`);
+            generateBtn.disabled = false;
+            document.getElementById('progressText').innerText = "✅ 完成！";
+        });
+    </script>
+</body>
+</html>
