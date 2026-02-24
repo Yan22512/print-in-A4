@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>相片極限排版 Pro</title>
+    <title>相片極限排版 Pro v1.1</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -33,13 +33,14 @@
                 </label>
             </div>
 
-            <div class="border-2 border-dashed border-slate-300 hover:border-emerald-400 bg-slate-50 rounded-xl p-6 text-center transition-colors">
-                <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
-                <button onclick="document.getElementById('fileInput').click()" class="text-sm text-emerald-600 font-bold w-full">
-                    <span class="text-2xl block mb-2">📥</span>
-                    點擊選取相片 / 圖檔
-                </button>
-                <p id="fileCount" class="text-xs text-slate-500 mt-2 font-medium">尚未選取任何檔案</p>
+            <div class="relative border-2 border-dashed border-slate-300 hover:border-emerald-400 bg-slate-50 rounded-xl p-8 text-center transition-colors overflow-hidden">
+                <input type="file" id="fileInput" multiple accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onclick="this.value=null">
+                
+                <div class="pointer-events-none relative z-0">
+                    <span class="text-4xl block mb-3">📥</span>
+                    <span class="text-sm text-emerald-600 font-bold block">點擊此處選取相片</span>
+                    <p id="fileCount" class="text-xs text-slate-500 mt-2 font-medium">支援多選，點擊即可上傳</p>
+                </div>
             </div>
 
             <div class="flex gap-3">
@@ -66,7 +67,7 @@
     <script>
         const { jsPDF } = window.jspdf;
 
-        // 座標設定檔 (保持邊距最佳化)
+        // 座標設定檔
         const LAYOUT_CONFIGS = {
             'reading_card': [{x:0,y:0,w:105,h:75},{x:105,y:0,w:105,h:75},{x:0,y:77,w:105,h:75},{x:105,y:77,w:105,h:75},{x:0,y:154,w:105,h:75},{x:105,y:154,w:105,h:75}],
             '3x5': [{x:2,y:2,w:127,h:76.2},{x:2,y:80.2,w:127,h:76.2},{x:2,y:158.4,w:127,h:76.2},{x:131,y:2,w:76.2,h:127},{x:131,y:131,w:76.2,h:127}],
@@ -79,10 +80,16 @@
         const fileCountDisplay = document.getElementById('fileCount');
         const generateBtn = document.getElementById('generateBtn');
 
-        fileInput.addEventListener('change', () => {
-            if (fileInput.files.length > 0) {
-                fileCountDisplay.innerText = `✅ 已選取 ${fileInput.files.length} 個檔案`;
-                fileCountDisplay.classList.add('text-emerald-600');
+        // V5.1 優化：即時反應選取狀態
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                fileCountDisplay.innerText = `✅ 成功選取 ${e.target.files.length} 張相片`;
+                fileCountDisplay.classList.remove('text-slate-500');
+                fileCountDisplay.classList.add('text-emerald-600', 'font-bold');
+            } else {
+                fileCountDisplay.innerText = "支援多選，點擊即可上傳";
+                fileCountDisplay.classList.remove('text-emerald-600', 'font-bold');
+                fileCountDisplay.classList.add('text-slate-500');
             }
         });
 
@@ -95,26 +102,20 @@
             doc.line(x+w,y+h,x+w-s,y+h); doc.line(x+w,y+h,x+w,y+h-s);
         }
 
-        // ==========================================
-        // 核心重構：Canvas 預先處理引擎
-        // 傳入檔案與「目標格子的長寬」，由 Canvas 負責旋轉與縮放
-        // ==========================================
         async function processImageForSlot(file, slotW, slotH) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
                 const url = URL.createObjectURL(file);
                 
                 img.onload = () => {
-                    URL.revokeObjectURL(url); // 釋放記憶體
+                    URL.revokeObjectURL(url);
                     let origW = img.width;
                     let origH = img.height;
 
-                    // 1. 判斷是否需要旋轉 (比對照片與格子的方向)
                     const isImgPortrait = origH > origW;
                     const isSlotPortrait = slotH > slotW;
                     const needsRotation = (isImgPortrait !== isSlotPortrait);
 
-                    // 2. 智慧壓縮：避免高畫素原圖塞爆記憶體
                     let drawW = origW;
                     let drawH = origH;
                     const MAX_PX = 2400; 
@@ -127,26 +128,77 @@
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
 
-                    // 3. Canvas 繪製 (若需旋轉，在此處將畫布翻轉，產出的圖片就直接是正的)
                     if (needsRotation) {
                         canvas.width = drawH;
                         canvas.height = drawW;
-                        
-                        // 填滿白底，防止 PNG 透明背景變黑
                         ctx.fillStyle = "#FFFFFF";
                         ctx.fillRect(0, 0, drawH, drawW);
-                        
                         ctx.translate(drawH / 2, drawW / 2);
                         ctx.rotate(90 * Math.PI / 180);
                         ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
                     } else {
                         canvas.width = drawW;
                         canvas.height = drawH;
-                        
                         ctx.fillStyle = "#FFFFFF";
                         ctx.fillRect(0, 0, drawW, drawH);
                         ctx.drawImage(img, 0, 0, drawW, drawH);
                     }
 
-                    // 回傳已經轉正、處理好的 JPEG 資料與最終長寬
-                    const data = canvas.toDataURL('image/jpeg', 0.92
+                    const data = canvas.toDataURL('image/jpeg', 0.92);
+                    resolve({ src: data, finalW: canvas.width, finalH: canvas.height });
+                };
+                img.onerror = () => reject("圖片解析失敗");
+                img.src = url;
+            });
+        }
+
+        generateBtn.addEventListener('click', async () => {
+            const files = fileInput.files;
+            if (files.length === 0) return alert('請先選取圖檔！');
+            
+            const sizeKey = document.getElementById('sizeSelect').value;
+            const config = LAYOUT_CONFIGS[sizeKey];
+            const hasL = document.getElementById('lineToggle').checked;
+            
+            generateBtn.disabled = true;
+            document.getElementById('statusArea').classList.remove('hidden');
+            const doc = new jsPDF('p', 'mm', 'a4');
+
+            for (let i = 0; i < files.length; i++) {
+                try {
+                    const p = Math.round(((i + 1) / files.length) * 100);
+                    document.getElementById('progressBar').style.width = p + '%';
+                    document.getElementById('progressPercent').innerText = p + '%';
+                    document.getElementById('progressText').innerText = `處理第 ${i+1} 張相片...`;
+
+                    const idx = i % config.length;
+                    const slot = config[idx];
+
+                    const processedImg = await processImageForSlot(files[i], slot.w, slot.h);
+                    
+                    if (i > 0 && idx === 0) doc.addPage();
+
+                    const ratio = Math.min(slot.w / processedImg.finalW, slot.h / processedImg.finalH);
+                    const renderW = processedImg.finalW * ratio;
+                    const renderH = processedImg.finalH * ratio;
+                    
+                    const offsetX = slot.x + (slot.w - renderW) / 2;
+                    const offsetY = slot.y + (slot.h - renderH) / 2;
+
+                    doc.addImage(processedImg.src, 'JPEG', offsetX, offsetY, renderW, renderH, undefined, 'FAST');
+                    
+                    if (hasL) drawL(doc, slot.x, slot.y, slot.w, slot.h);
+                } catch (err) {
+                    console.error(`第 ${i+1} 張處理失敗`, err);
+                }
+            }
+
+            const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
+            doc.save(`排版_${sizeKey}_${ts}.pdf`);
+            
+            generateBtn.disabled = false;
+            document.getElementById('progressText').innerText = "✅ PDF 產出成功！";
+        });
+    </script>
+</body>
+</html>
