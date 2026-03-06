@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>相片極限排版 Pro v1.1</title>
+    <title>相片極限排版 v1.2</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -17,6 +17,7 @@
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-2">選擇圖片尺寸</label>
                 <select id="sizeSelect" class="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-700 cursor-pointer">
+                    <option value="A7">A4 切八格 / A7 (7.4x10.5 cm - 8張)</option>
                     <option value="reading_card">點讀小卡 (7.5x10.5 cm - 6張)</option>
                     <option value="3x5">3x5 吋 (約 7.6x12.7 cm - 5張)</option>
                     <option value="4x6">4x6 吋 (約 10.2x15.2 cm - 3張)</option>
@@ -35,7 +36,6 @@
 
             <div class="relative border-2 border-dashed border-slate-300 hover:border-emerald-400 bg-slate-50 rounded-xl p-8 text-center transition-colors overflow-hidden">
                 <input type="file" id="fileInput" multiple accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onclick="this.value=null">
-                
                 <div class="pointer-events-none relative z-0">
                     <span class="text-4xl block mb-3">📥</span>
                     <span class="text-sm text-emerald-600 font-bold block">點擊此處選取相片</span>
@@ -67,20 +67,25 @@
     <script>
         const { jsPDF } = window.jspdf;
 
-        // 座標設定檔
+        // 座標設定檔 (新增 A7 切八格)
         const LAYOUT_CONFIGS = {
+            'A7': [ // A4完美切八格 (105 x 74.25 mm)
+                {x:0, y:0, w:105, h:74.25}, {x:105, y:0, w:105, h:74.25},
+                {x:0, y:74.25, w:105, h:74.25}, {x:105, y:74.25, w:105, h:74.25},
+                {x:0, y:148.5, w:105, h:74.25}, {x:105, y:148.5, w:105, h:74.25},
+                {x:0, y:222.75, w:105, h:74.25}, {x:105, y:222.75, w:105, h:74.25}
+            ],
             'reading_card': [{x:0,y:0,w:105,h:75},{x:105,y:0,w:105,h:75},{x:0,y:77,w:105,h:75},{x:105,y:77,w:105,h:75},{x:0,y:154,w:105,h:75},{x:105,y:154,w:105,h:75}],
             '3x5': [{x:2,y:2,w:127,h:76.2},{x:2,y:80.2,w:127,h:76.2},{x:2,y:158.4,w:127,h:76.2},{x:131,y:2,w:76.2,h:127},{x:131,y:131,w:76.2,h:127}],
             '4x6': [{x:2,y:2,w:101.6,h:152.4},{x:105.6,y:2,w:101.6,h:152.4},{x:2,y:156.4,w:152.4,h:101.6}],
-            'A6': [{x:2,y:2,w:105,h:148},{x:107,y:2,w:105,h:148},{x:2,y:152,w:105,h:148},{x:107,y:152,w:105,h:148}],
-            'A5': [{x:31,y:2,w:148,h:210},{x:31,y:214,w:148,h:210}]
+            'A6': [{x:0,y:0,w:105,h:148},{x:105,y:0,w:105,h:148},{x:0,y:148.5,w:105,h:148},{x:105,y:148.5,w:105,h:148}],
+            'A5': [{x:31,y:0,w:148,h:210},{x:31,y:210,w:148,h:210}] // 微調 A5 與 A6 為零邊距
         };
 
         const fileInput = document.getElementById('fileInput');
         const fileCountDisplay = document.getElementById('fileCount');
         const generateBtn = document.getElementById('generateBtn');
 
-        // V5.1 優化：即時反應選取狀態
         fileInput.addEventListener('change', (e) => {
             if (e.target.files && e.target.files.length > 0) {
                 fileCountDisplay.innerText = `✅ 成功選取 ${e.target.files.length} 張相片`;
